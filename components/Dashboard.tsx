@@ -8,15 +8,22 @@ interface DashboardProps {
   recorders: Recorder[];
 }
 
-const COLORS = ['#0f9d58', '#ea4335', '#fbbc04'];
+const COLORS = ['#0f9d58', '#ea4335', '#fbbc04', '#4285f4', '#aa00ff', '#00bcd4'];
 
 const Dashboard: React.FC<DashboardProps> = ({ cameras, recorders }) => {
   
-  const statusData = [
-    { name: 'Hoạt động', value: cameras.filter(c => c.status === CameraStatus.ACTIVE).length },
-    { name: 'Mất tín hiệu', value: cameras.filter(c => c.status === CameraStatus.INACTIVE).length },
-    { name: 'Bảo trì', value: cameras.filter(c => c.status === CameraStatus.MAINTENANCE).length },
-  ];
+  // Calculate Status Data dynamically
+  const statusMap = new Map<string, number>();
+  cameras.forEach(cam => {
+    const status = cam.status || 'Unknown';
+    statusMap.set(status, (statusMap.get(status) || 0) + 1);
+  });
+
+  const statusData = Array.from(statusMap).map(([name, value]) => ({ name, value }));
+
+  // Helper counts for top cards (assuming 'Hoạt động' is the positive status)
+  const activeCount = statusMap.get('Hoạt động') || 0;
+  const issueCount = cameras.length - activeCount;
 
   // Group by Location
   const locationMap = new Map<string, number>();
@@ -28,7 +35,7 @@ const Dashboard: React.FC<DashboardProps> = ({ cameras, recorders }) => {
   const locationData = Array.from(locationMap).map(([name, count]) => ({ name, count }));
 
   const Card = ({ title, value, icon: Icon, color }: { title: string, value: string | number, icon: any, color: string }) => (
-    <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100 flex items-center space-x-4">
+    <div className="bg-white p-4 md:p-6 rounded-lg shadow-sm border border-gray-100 flex items-center space-x-4">
       <div className={`p-3 rounded-full ${color} bg-opacity-10`}>
         <Icon className={`w-8 h-8 ${color.replace('bg-', 'text-')}`} />
       </div>
@@ -42,7 +49,7 @@ const Dashboard: React.FC<DashboardProps> = ({ cameras, recorders }) => {
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Top Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
         <Card 
           title="Tổng số Camera" 
           value={cameras.length} 
@@ -57,13 +64,13 @@ const Dashboard: React.FC<DashboardProps> = ({ cameras, recorders }) => {
         />
         <Card 
           title="Đang hoạt động" 
-          value={statusData[0].value} 
+          value={activeCount} 
           icon={ShieldCheck} 
           color="bg-green-500 text-green-600" 
         />
         <Card 
           title="Cần kiểm tra" 
-          value={statusData[1].value + statusData[2].value} 
+          value={issueCount} 
           icon={AlertTriangle} 
           color="bg-red-500 text-red-600" 
         />
@@ -108,12 +115,12 @@ const Dashboard: React.FC<DashboardProps> = ({ cameras, recorders }) => {
           </h3>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={locationData}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} />
-                <YAxis axisLine={false} tickLine={false} />
-                <Tooltip cursor={{ fill: '#f3f4f6' }} />
-                <Bar dataKey="count" fill="#4285f4" radius={[4, 4, 0, 0]} barSize={40} />
+              <BarChart data={locationData} layout="vertical" margin={{ top: 5, right: 30, left: 40, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                <XAxis type="number" />
+                <YAxis dataKey="name" type="category" width={80} tick={{fontSize: 12}} />
+                <Tooltip />
+                <Bar dataKey="count" fill="#4285f4" radius={[0, 4, 4, 0]} barSize={20} />
               </BarChart>
             </ResponsiveContainer>
           </div>

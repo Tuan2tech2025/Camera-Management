@@ -1,4 +1,6 @@
-import { Camera, CameraStatus, Recorder } from './types';
+import { Camera, CameraStatus, Recorder, LogEntry } from './types';
+
+export const APP_VERSION = '1.0.28';
 
 export const INITIAL_RECORDERS: Recorder[] = [
   { id: 'rec_1', name: 'Bãi', ip: '192.168.11.236', port: 236, username: 'admin', location: 'Khu Bãi', hddCapacity: '8TB', note: 'Phongit@2025' },
@@ -29,4 +31,34 @@ export const INITIAL_CAMERAS: Camera[] = [
   // Bãi / Yard
   { id: 'cam_12', name: 'Hạ Lưu', recorderId: 'rec_1', ip: '192.168.11.236:1', location: 'Bãi', installDate: '2022-11-01', status: CameraStatus.ACTIVE, type: 'PTZ' },
   { id: 'cam_13', name: 'Thượng Lưu', recorderId: 'rec_1', ip: '192.168.11.236:2', location: 'Bãi', installDate: '2022-11-01', status: CameraStatus.ACTIVE, type: 'PTZ' },
+];
+
+export const INITIAL_LOGS: LogEntry[] = [
+  {
+    id: 'log_1',
+    action: 'Thêm',
+    targetType: 'Camera',
+    targetName: 'Cửa Kho KT',
+    details: 'Thêm mới camera Bullet vào Kho KT',
+    timestamp: new Date(Date.now() - 86400000 * 2).toISOString(),
+    user: 'AD'
+  },
+  {
+    id: 'log_2',
+    action: 'Sửa',
+    targetType: 'Đầu Ghi',
+    targetName: 'Tòa nhà',
+    details: 'Cập nhật dung lượng HDD lên 10TB',
+    timestamp: new Date(Date.now() - 86400000).toISOString(),
+    user: 'AD'
+  },
+  {
+    id: 'log_3',
+    action: 'Xóa',
+    targetType: 'Camera',
+    targetName: 'Cam Cũ Hỏng',
+    details: 'Xóa camera không còn sử dụng',
+    timestamp: new Date().toISOString(),
+    user: 'AD'
+  }
 ];

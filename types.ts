@@ -23,9 +23,25 @@ export interface Camera {
   ip: string; // The specific IP or Channel
   location: string; // e.g., "Làn vào 1", "Kho CFS"
   installDate: string;
-  status: CameraStatus;
+  status: string; // Changed from Enum to string for dynamic management
   type: string; // e.g., "PTZ", "Bullet", "Dome"
   note?: string;
 }
 
-export type ViewMode = 'dashboard' | 'list' | 'map' | 'ai';
+export interface SiteMapData {
+  id: string;
+  name: string;
+  imageUrl: string | null;
+}
+
+export interface LogEntry {
+  id: string;
+  action: 'Thêm' | 'Sửa' | 'Xóa';
+  targetType: 'Camera' | 'Đầu Ghi' | 'Vị Trí' | 'Loại Cam' | 'Trạng Thái' | 'Sơ Đồ';
+  targetName: string;
+  details: string;
+  timestamp: string;
+  user: string;
+}
+
+export type ViewMode = 'dashboard' | 'list' | 'map' | 'ai' | 'logs';
