@@ -1,0 +1,5 @@
+{
+  "name": "CamManager Pro",
+  "description": "A professional dashboard to manage security camera systems, visualize locations, and integrate with AI for system analysis. Designed to replicate Google Sheets data structures with a modern UI.",
+  "requestFramePermissions": []
+}
