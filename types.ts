@@ -4,6 +4,16 @@ export enum CameraStatus {
   MAINTENANCE = 'Bảo trì'
 }
 
+export interface User {
+  id: string;
+  username: string;
+  password?: string; // Optional for security when passing around
+  fullName: string;
+  role: 'admin' | 'user';
+  avatar?: string;
+  allowedLocations?: string[]; // List of locations this user can access. Empty/Undefined = All (Admin)
+}
+
 export interface Recorder {
   id: string;
   name: string;
@@ -37,11 +47,11 @@ export interface SiteMapData {
 export interface LogEntry {
   id: string;
   action: 'Thêm' | 'Sửa' | 'Xóa';
-  targetType: 'Camera' | 'Đầu Ghi' | 'Vị Trí' | 'Loại Cam' | 'Trạng Thái' | 'Sơ Đồ';
+  targetType: 'Camera' | 'Đầu Ghi' | 'Vị Trí' | 'Loại Cam' | 'Trạng Thái' | 'Sơ Đồ' | 'Tài Khoản';
   targetName: string;
   details: string;
   timestamp: string;
   user: string;
 }
 
-export type ViewMode = 'dashboard' | 'list' | 'map' | 'ai' | 'logs';
+export type ViewMode = 'dashboard' | 'list' | 'map' | 'ai' | 'logs' | 'account';

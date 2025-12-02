@@ -1,6 +1,25 @@
-import { Camera, CameraStatus, Recorder, LogEntry } from './types';
+import { Camera, CameraStatus, Recorder, LogEntry, User } from './types';
 
-export const APP_VERSION = '1.0.28';
+export const APP_VERSION = '1.0.40';
+
+export const INITIAL_USERS: User[] = [
+  {
+    id: 'usr_1',
+    username: 'admin',
+    password: '123', // In a real app, this would be hashed
+    fullName: 'Administrator',
+    role: 'admin',
+    allowedLocations: [] // Admin sees all
+  },
+  {
+    id: 'usr_2',
+    username: 'staff',
+    password: '123',
+    fullName: 'Nhân Viên Kho',
+    role: 'user',
+    allowedLocations: ['Kho KT', 'Bãi'] // Can only see cameras in these locations
+  }
+];
 
 export const INITIAL_RECORDERS: Recorder[] = [
   { id: 'rec_1', name: 'Bãi', ip: '192.168.11.236', port: 236, username: 'admin', location: 'Khu Bãi', hddCapacity: '8TB', note: 'Phongit@2025' },
@@ -41,7 +60,7 @@ export const INITIAL_LOGS: LogEntry[] = [
     targetName: 'Cửa Kho KT',
     details: 'Thêm mới camera Bullet vào Kho KT',
     timestamp: new Date(Date.now() - 86400000 * 2).toISOString(),
-    user: 'AD'
+    user: 'admin'
   },
   {
     id: 'log_2',
@@ -50,7 +69,7 @@ export const INITIAL_LOGS: LogEntry[] = [
     targetName: 'Tòa nhà',
     details: 'Cập nhật dung lượng HDD lên 10TB',
     timestamp: new Date(Date.now() - 86400000).toISOString(),
-    user: 'AD'
+    user: 'admin'
   },
   {
     id: 'log_3',
@@ -59,6 +78,6 @@ export const INITIAL_LOGS: LogEntry[] = [
     targetName: 'Cam Cũ Hỏng',
     details: 'Xóa camera không còn sử dụng',
     timestamp: new Date().toISOString(),
-    user: 'AD'
+    user: 'admin'
   }
 ];

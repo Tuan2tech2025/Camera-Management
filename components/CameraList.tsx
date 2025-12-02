@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Camera, Recorder } from '../types';
-import { Search, Edit, Trash2, Plus, Download, Server, Video, HardDrive, X, Save, MapPin, GripVertical, AlertTriangle, Tag, Activity, ArrowRight, Layers, Aperture, Move, Eye, Flame, Box as BoxIcon, CircleDot, Filter } from 'lucide-react';
+import { Search, Edit, Trash2, Plus, Download, Server, Video, HardDrive, X, Save, MapPin, GripVertical, AlertTriangle, Tag, Activity, ArrowRight, Layers, Aperture, Move, Eye, Flame, Box as BoxIcon, CircleDot, Filter, Upload } from 'lucide-react';
 
 interface CameraListProps {
   cameras: Camera[];
@@ -23,6 +23,10 @@ interface CameraListProps {
 
   onSaveStatus: (oldName: string, newName: string) => void;
   onDeleteStatus: (name: string) => void;
+
+  onImportCameras?: (data: any[]) => void;
+  
+  initialFilters?: { type: 'status' | 'location' | 'year', value: string } | null;
 }
 
 type TabType = 'cameras' | 'recorders' | 'locations' | 'types' | 'statuses';
@@ -64,10 +68,12 @@ const CameraList: React.FC<CameraListProps> = ({
   onDeleteRecorder,
   onSaveLocation, 
   onDeleteLocation,
-  onSaveType,
+  onSaveType, 
   onDeleteType,
   onSaveStatus,
-  onDeleteStatus
+  onDeleteStatus,
+  onImportCameras,
+  initialFilters
 }) => {
   const [activeTab, setActiveTab] = useState<TabType>('cameras');
   const [searchTerm, setSearchTerm] = useState('');
@@ -78,6 +84,24 @@ const CameraList: React.FC<CameraListProps> = ({
   const [filterRecorder, setFilterRecorder] = useState<string>('all');
   const [filterType, setFilterType] = useState<string>('all');
   const [filterLocation, setFilterLocation] = useState<string>('all');
+
+  // Handle incoming filters from Dashboard
+  useEffect(() => {
+    if (initialFilters) {
+        setActiveTab('cameras');
+        setFilterStatus('all');
+        setFilterLocation('all');
+        setSearchTerm('');
+        
+        if (initialFilters.type === 'status') {
+            setFilterStatus(initialFilters.value);
+        } else if (initialFilters.type === 'location') {
+            setFilterLocation(initialFilters.value);
+        } else if (initialFilters.type === 'year') {
+            setSearchTerm(initialFilters.value); // Use search for year
+        }
+    }
+  }, [initialFilters]);
 
   // Modal States
   const [editingCamera, setEditingCamera] = useState<Camera | null>(null);
@@ -90,6 +114,9 @@ const CameraList: React.FC<CameraListProps> = ({
   // Delete Confirmation State
   const [deleteTarget, setDeleteTarget] = useState<{ type: 'camera' | 'recorder' | 'location' | 'type' | 'status', id: string, name: string } | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+
+  // File Upload Ref
+  const importInputRef = useRef<HTMLInputElement>(null);
 
   // HDD Options
   const hddOptions = ['1TB', '2TB', '4TB', '6TB', '8TB', '10TB', '12TB'];
@@ -182,8 +209,11 @@ const CameraList: React.FC<CameraListProps> = ({
 
   // --- Filtering Logic ---
   const filteredCameras = cameras.filter(cam => {
-    const matchesSearch = cam.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          cam.ip.toLowerCase().includes(searchTerm.toLowerCase());
+    const sTerm = searchTerm.toLowerCase();
+    const matchesSearch = cam.name.toLowerCase().includes(sTerm) || 
+                          cam.ip.toLowerCase().includes(sTerm) ||
+                          (cam.installDate && cam.installDate.includes(sTerm)); // Allow search by year/date
+                          
     const matchesStatus = filterStatus === 'all' || cam.status === filterStatus;
     const matchesRecorder = filterRecorder === 'all' || cam.recorderId === filterRecorder;
     const matchesType = filterType === 'all' || cam.type === filterType;
@@ -345,6 +375,64 @@ const CameraList: React.FC<CameraListProps> = ({
     setIsModalOpen(false);
   };
 
+  const downloadTemplate = () => {
+    const BOM = "\uFEFF";
+    const header = "Tên Camera,IP,Loại,Đầu Ghi,Vị Trí,Ngày Lắp,Trạng Thái,Ghi Chú\n";
+    const example = "Cam Sảnh Chính,192.168.1.100,Dome,Tòa Nhà,Sảnh A,2025-01-01,Hoạt động,Camera mới lắp\n";
+    const csvContent = BOM + header + example;
+    
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", "cammanager_template.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !onImportCameras) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+        const text = event.target?.result as string;
+        // Basic CSV Parsing
+        const lines = text.split(/\r?\n/);
+        const headers = lines[0].split(',').map(h => h.trim());
+        
+        const importedData = [];
+
+        for(let i = 1; i < lines.length; i++) {
+            if (!lines[i].trim()) continue;
+            // Handle commas inside quotes logic is complex, assuming simple CSV for now
+            const values = lines[i].split(',').map(v => v.trim());
+            
+            if (values.length < 2) continue; // Skip invalid lines
+
+            const item: any = {};
+            // Map CSV columns to Object keys
+            // CSV: Tên Camera,IP,Loại,Đầu Ghi,Vị Trí,Ngày Lắp,Trạng Thái,Ghi Chú
+            item.name = values[0];
+            item.ip = values[1];
+            item.type = values[2];
+            item.recorderName = values[3]; // We will map this to ID in App.tsx
+            item.location = values[4];
+            item.installDate = values[5];
+            item.status = values[6];
+            item.note = values[7];
+
+            importedData.push(item);
+        }
+        
+        onImportCameras(importedData);
+        if (importInputRef.current) importInputRef.current.value = ''; // Reset input
+    };
+    reader.readAsText(file);
+  };
+
+
   const exportToExcel = () => {
     let csvContent = "";
     
@@ -484,13 +572,41 @@ const CameraList: React.FC<CameraListProps> = ({
 
                 <div className="flex gap-2">
                      {(activeTab === 'cameras' || activeTab === 'recorders') && (
-                        <button 
-                            onClick={exportToExcel}
-                            className="hidden md:flex items-center px-3 py-2 border border-gray-200 text-gray-600 rounded-lg text-sm hover:bg-gray-50 transition-colors"
-                        >
-                            <Download className="w-4 h-4 mr-2" />
-                            Xuất Excel
-                        </button>
+                        <>
+                            {activeTab === 'cameras' && (
+                                <>
+                                    <button 
+                                        onClick={downloadTemplate}
+                                        className="hidden md:flex items-center px-3 py-2 border border-gray-200 text-gray-600 rounded-lg text-sm hover:bg-gray-50 transition-colors"
+                                        title="Tải file mẫu Excel"
+                                    >
+                                        <Download className="w-4 h-4 mr-2" />
+                                        Mẫu
+                                    </button>
+                                    <button 
+                                        onClick={() => importInputRef.current?.click()}
+                                        className="hidden md:flex items-center px-3 py-2 border border-gray-200 text-blue-600 rounded-lg text-sm hover:bg-blue-50 transition-colors"
+                                    >
+                                        <Upload className="w-4 h-4 mr-2" />
+                                        Nhập Excel
+                                    </button>
+                                    <input 
+                                        type="file" 
+                                        ref={importInputRef}
+                                        className="hidden"
+                                        accept=".csv"
+                                        onChange={handleFileUpload}
+                                    />
+                                </>
+                            )}
+                            <button 
+                                onClick={exportToExcel}
+                                className="hidden md:flex items-center px-3 py-2 border border-gray-200 text-gray-600 rounded-lg text-sm hover:bg-gray-50 transition-colors"
+                            >
+                                <Download className="w-4 h-4 mr-2" />
+                                Xuất Excel
+                            </button>
+                        </>
                     )}
                     <button 
                     onClick={() => {
@@ -538,6 +654,14 @@ const CameraList: React.FC<CameraListProps> = ({
                         <option value="all">Tất cả vị trí</option>
                         {locations.map(l => <option key={l} value={l}>{l}</option>)}
                     </select>
+
+                    <button 
+                        onClick={() => importInputRef.current?.click()}
+                        className="md:hidden flex items-center justify-center px-3 py-2 border border-gray-200 text-blue-600 rounded-lg text-sm hover:bg-blue-50 col-span-2"
+                    >
+                        <Upload className="w-4 h-4 mr-2" />
+                        Nhập Excel
+                    </button>
 
                     <button 
                         onClick={exportToExcel}
