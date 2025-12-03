@@ -2,13 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { ViewMode, Camera, Recorder, CameraStatus, LogEntry, SiteMapData, User } from './types';
 import { INITIAL_CAMERAS, INITIAL_RECORDERS, INITIAL_LOGS, APP_VERSION, INITIAL_USERS } from './constants';
 import Dashboard from './components/Dashboard';
-import CameraList from './components/CameraList    
+import CameraList from './components/CameraList';
 import SiteMap from './components/SiteMap';
 import ChatAssistant from './components/ChatAssistant';
 import ActivityLog from './components/ActivityLog';
 import Login from './components/Login';
 import Account from './components/Account';
-import { LayoutDashboard, List, Map as MapIcon, MessageSquare, LogOut, Camera as CameraIcon, Menu, X, History, CheckCircle, AlertCircle, UserCircle } from 'lucide-react';
+import { hasApiKey, saveApiKey, initializeGemini } from './services/geminiService';
+import { LayoutDashboard, List, Map as MapIcon, MessageSquare, LogOut, Camera as CameraIcon, Menu, X, History, CheckCircle, AlertCircle, UserCircle, Key } from 'lucide-react';
 
 const App: React.FC = () => {
   // --- Auth & User Management State ---
@@ -49,6 +50,10 @@ const App: React.FC = () => {
   // Filters passed from Dashboard to List
   const [initialListFilters, setInitialListFilters] = useState<{ type: 'status' | 'location' | 'year', value: string } | null>(null);
 
+  // API Key Modal State
+  const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
+  const [inputApiKey, setInputApiKey] = useState('');
+
   useEffect(() => {
     const handleResize = () => {
       if (window.innerWidth >= 768) {
@@ -58,6 +63,14 @@ const App: React.FC = () => {
       }
     };
     window.addEventListener('resize', handleResize);
+    
+    // Check for API Key on mount
+    if (!hasApiKey()) {
+        setIsApiKeyModalOpen(true);
+    } else {
+        initializeGemini();
+    }
+
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
@@ -131,6 +144,19 @@ const App: React.FC = () => {
         setUsers(prev => prev.map(u => u.id === currentUser.id ? updatedUser : u));
         addLog('Sửa', 'Tài Khoản', currentUser.username, 'Đổi mật khẩu cá nhân');
     }
+  };
+
+  const handleSaveApiKey = () => {
+      if (inputApiKey.trim()) {
+          saveApiKey(inputApiKey.trim());
+          initializeGemini();
+          setIsApiKeyModalOpen(false);
+          setNotification({
+              title: "Cấu hình thành công",
+              message: "API Key đã được lưu. Tính năng AI đã sẵn sàng.",
+              type: 'success'
+          });
+      }
   };
 
   // --- User Management Handlers (Admin Only) ---
@@ -374,6 +400,17 @@ const App: React.FC = () => {
   const handleDeleteRecorder = (id: string) => {
     const rec = recorders.find(r => r.id === id);
     if (rec) {
+        // Validation: Check if cameras use this recorder
+        const usedByCameras = cameras.filter(c => c.recorderId === id).length;
+        if (usedByCameras > 0) {
+            setNotification({
+                title: "Không thể xóa Đầu Ghi",
+                message: `Đầu ghi này đang quản lý ${usedByCameras} camera.\nVui lòng xóa hoặc chuyển camera sang đầu ghi khác trước.`,
+                type: 'warning'
+            });
+            return;
+        }
+
       setRecorders(recorders.filter(r => r.id !== id));
       addLog('Xóa', 'Đầu Ghi', rec.name, `Đã xóa đầu ghi IP: ${rec.ip}`);
     }
@@ -508,7 +545,57 @@ const App: React.FC = () => {
 
   // --- AUTH CHECK ---
   if (!currentUser) {
-    return <Login onLogin={handleLogin} error={loginError} />;
+    return (
+        <>
+            <Login onLogin={handleLogin} error={loginError} />
+            
+            {/* API Key Modal for Login Screen (Initial Setup) */}
+            {isApiKeyModalOpen && (
+                <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-[70] p-4">
+                    <div className="bg-white rounded-lg shadow-2xl w-full max-w-md p-6 border-2 border-primary animate-fade-in">
+                        <div className="flex items-center justify-center w-14 h-14 rounded-full bg-green-100 mx-auto mb-4">
+                            <Key className="w-7 h-7 text-green-600" />
+                        </div>
+                        <h3 className="text-xl font-bold text-center text-gray-900 mb-2">Cấu Hình API Key</h3>
+                        <p className="text-center text-gray-500 text-sm mb-6">
+                            Để sử dụng các tính năng AI thông minh của ứng dụng, vui lòng nhập <strong>Google Gemini API Key</strong> của bạn.
+                        </p>
+                        
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Google GenAI API Key</label>
+                                <input 
+                                    type="password"
+                                    value={inputApiKey}
+                                    onChange={(e) => setInputApiKey(e.target.value)}
+                                    placeholder="Dán API Key của bạn vào đây..."
+                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white text-gray-900"
+                                />
+                            </div>
+                            
+                            <button 
+                                onClick={handleSaveApiKey}
+                                className="w-full py-3 bg-primary text-white font-bold rounded-lg hover:bg-green-700 transition-colors shadow-lg"
+                            >
+                                Lưu và Tiếp Tục
+                            </button>
+                            
+                            <div className="text-center pt-2">
+                                <a 
+                                    href="https://aistudio.google.com/app/apikey" 
+                                    target="_blank" 
+                                    rel="noreferrer"
+                                    className="text-xs text-blue-600 hover:underline flex items-center justify-center"
+                                >
+                                    Chưa có Key? Lấy miễn phí tại Google AI Studio <span className="ml-1">↗</span>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </>
+    );
   }
 
   return (

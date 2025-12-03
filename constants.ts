@@ -1,6 +1,6 @@
 import { Camera, CameraStatus, Recorder, LogEntry, User } from './types';
 
-export const APP_VERSION = '1.0.40';
+export const APP_VERSION = '1.0.41';
 
 export const INITIAL_USERS: User[] = [
   {

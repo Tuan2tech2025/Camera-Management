@@ -2,30 +2,45 @@ import { GoogleGenAI } from "@google/genai";
 import { Camera, Recorder } from '../types';
 
 let genAI: GoogleGenAI | null = null;
+const STORAGE_KEY = 'gemini_api_key';
+
+export const saveApiKey = (key: string) => {
+  localStorage.setItem(STORAGE_KEY, key);
+};
+
+export const getStoredApiKey = () => {
+  return localStorage.getItem(STORAGE_KEY);
+};
+
+export const hasApiKey = () => {
+  return !!(process.env.API_KEY || getStoredApiKey());
+}
 
 export const initializeGemini = () => {
-  try {
-    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-    if (apiKey && apiKey.trim()) {
-      genAI = new GoogleGenAI({ apiKey });
-    }
-  } catch (error) {
-    console.warn('Gemini initialization failed:', error);
-    genAI = null;
+  // Prioritize Local Storage Key (User input), then Env Var (Build time)
+  const storedKey = getStoredApiKey();
+  const envKey = process.env.API_KEY;
+  const finalKey = storedKey || envKey;
+
+  if (finalKey) {
+    genAI = new GoogleGenAI({ apiKey: finalKey });
+    return true;
   }
+  return false;
 };
 
 export const analyzeSystem = async (
-  query: string,
-  cameras: Camera[],
+  query: string, 
+  cameras: Camera[], 
   recorders: Recorder[]
 ): Promise<string> => {
+  // Ensure initialization attempts to load key
   if (!genAI) {
-      initializeGemini();
-      if (!genAI) {
-        return "⚠️ Trợ lý AI chưa được kích hoạt.\n\nĐể sử dụng tính năng này, vui lòng:\n1. Lấy Gemini API key từ Google AI Studio\n2. Thêm vào file .env: `GEMINI_API_KEY=your_key_here`\n3. Khởi động lại ứng dụng";
-      }
+      const success = initializeGemini();
+      if (!success) return "Vui lòng nhập Google API Key để sử dụng tính năng AI. (F5 lại trang nếu bạn vừa nhập)";
   }
+
+  if (!genAI) return "Lỗi: Chưa cấu hình API Key.";
 
   const model = genAI.models;
   
@@ -58,6 +73,6 @@ export const analyzeSystem = async (
     return response.text || "I couldn't generate a response.";
   } catch (error) {
     console.error("Gemini API Error:", error);
-    return "Sorry, I encountered an error analyzing your system.";
+    return "Xin lỗi, tôi gặp lỗi khi phân tích hệ thống. Vui lòng kiểm tra lại API Key.";
   }
 };
