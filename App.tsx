@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ViewMode, Camera, Recorder, CameraStatus, LogEntry, SiteMapData, User } from './types';
 import { INITIAL_CAMERAS, INITIAL_RECORDERS, INITIAL_LOGS, APP_VERSION, INITIAL_USERS } from './constants';
 import Dashboard from './components/Dashboard';
-import CameraList from './components/CameraList';
+import CameraList from './components/CameraList    
 import SiteMap from './components/SiteMap';
 import ChatAssistant from './components/ChatAssistant';
 import ActivityLog from './components/ActivityLog';
