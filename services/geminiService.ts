@@ -5,7 +5,7 @@ let genAI: GoogleGenAI | null = null;
 
 export const initializeGemini = () => {
   try {
-    const apiKey = process.env.API_KEY;
+    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
     if (apiKey && apiKey.trim()) {
       genAI = new GoogleGenAI({ apiKey });
     }
