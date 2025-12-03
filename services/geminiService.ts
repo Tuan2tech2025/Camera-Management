@@ -4,20 +4,27 @@ import { Camera, Recorder } from '../types';
 let genAI: GoogleGenAI | null = null;
 
 export const initializeGemini = () => {
-  const apiKey = process.env.API_KEY;
-  if (apiKey) {
-    genAI = new GoogleGenAI({ apiKey });
+  try {
+    const apiKey = process.env.API_KEY;
+    if (apiKey && apiKey.trim()) {
+      genAI = new GoogleGenAI({ apiKey });
+    }
+  } catch (error) {
+    console.warn('Gemini initialization failed:', error);
+    genAI = null;
   }
 };
 
 export const analyzeSystem = async (
-  query: string, 
-  cameras: Camera[], 
+  query: string,
+  cameras: Camera[],
   recorders: Recorder[]
 ): Promise<string> => {
   if (!genAI) {
       initializeGemini();
-      if (!genAI) return "Error: API Key not found. Please set REACT_APP_GEMINI_API_KEY.";
+      if (!genAI) {
+        return "⚠️ Trợ lý AI chưa được kích hoạt.\n\nĐể sử dụng tính năng này, vui lòng:\n1. Lấy Gemini API key từ Google AI Studio\n2. Thêm vào file .env: `GEMINI_API_KEY=your_key_here`\n3. Khởi động lại ứng dụng";
+      }
   }
 
   const model = genAI.models;
